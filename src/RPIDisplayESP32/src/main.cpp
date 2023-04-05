@@ -233,14 +233,14 @@ unsigned int rainbow(byte value)
 #define DISP_TSIZE 3
 #define DISP_TCOLOR TFT_CYAN
 
-char ssid[] = "";          // change xxxx to Wi-Fi SSID
+char ssid[] = "henryTestAp";          // change xxxx to Wi-Fi SSID
 char password[] = ""; // change xxxx to Wi-Fi password
 char server[] = "api.open-meteo.com";
 
 int count = 99;
 WiFiClient client;
 TFT_eSPI tft = TFT_eSPI();         // Invoke custom library
-DynamicJsonDocument jsonDoc(8192); // JSON formatted data
+DynamicJsonDocument jsonDoc(9216); // JSON formatted data
 
 unsigned int chkTime = 0;
 uint16_t x, y;
@@ -454,13 +454,13 @@ void secondScreen()
 #include <WiFi.h>
 #include <ArduinoJson.h>
 
-char ssid[] = "isc_IOT";          // change xxxx to Wi-Fi SSID
-char password[] = "2FGwzHBLKsX#"; // change xxxx to Wi-Fi password
+char ssid[] = "henryTestAp";          // change xxxx to Wi-Fi SSID
+char password[] = ""; // change xxxx to Wi-Fi password
 char server[] = "api.open-meteo.com";
 
 WiFiClient client;
 TFT_eSPI tft = TFT_eSPI();         // Invoke custom library
-DynamicJsonDocument jsonDoc(1024); // JSON formatted data
+DynamicJsonDocument jsonDoc(8192); // JSON formatted data
 
 // This is the file name used to store the calibration data
 // You can change this to create new calibration files.
@@ -961,7 +961,62 @@ void rainbow_fill()
 }
 
 #elif 0
+#include <Arduino.h>
+#define DEEP_SLEEP_TOUCH_WAKEUP
 
+#ifdef DEEP_SLEEP_TOUCH_WAKEUP
+#define Threshold 40 /* Greater the value, more the sensitivity */
+
+RTC_DATA_ATTR int bootCount = 0;
+touch_pad_t touchPin;
+/*
+Method to print the reason by which ESP32
+has been awaken from sleep
+*/
+void print_wakeup_reason(){
+  esp_sleep_wakeup_cause_t wakeup_reason;
+
+  wakeup_reason = esp_sleep_get_wakeup_cause();
+
+  switch(wakeup_reason)
+  {
+    case ESP_SLEEP_WAKEUP_EXT0 : Serial.println("Wakeup caused by external signal using RTC_IO"); break;
+    case ESP_SLEEP_WAKEUP_EXT1 : Serial.println("Wakeup caused by external signal using RTC_CNTL"); break;
+    case ESP_SLEEP_WAKEUP_TIMER : Serial.println("Wakeup caused by timer"); break;
+    case ESP_SLEEP_WAKEUP_TOUCHPAD : Serial.println("Wakeup caused by touchpad"); break;
+    case ESP_SLEEP_WAKEUP_ULP : Serial.println("Wakeup caused by ULP program"); break;
+    default : Serial.printf("Wakeup was not caused by deep sleep: %d\n",wakeup_reason); break;
+  }
+}
+
+/*
+Method to print the touchpad by which ESP32
+has been awaken from sleep
+*/
+void print_wakeup_touchpad(){
+  touchPin = esp_sleep_get_touchpad_wakeup_status();
+
+  switch(touchPin)
+  {
+    case 0  : Serial.println("Touch detected on GPIO 4"); break;
+    case 1  : Serial.println("Touch detected on GPIO 0"); break;
+    case 2  : Serial.println("Touch detected on GPIO 2"); break;
+    case 3  : Serial.println("Touch detected on GPIO 15"); break;
+    case 4  : Serial.println("Touch detected on GPIO 13"); break;
+    case 5  : Serial.println("Touch detected on GPIO 12"); break;
+    case 6  : Serial.println("Touch detected on GPIO 14"); break;
+    case 7  : Serial.println("Touch detected on GPIO 27"); break;
+    case 8  : Serial.println("Touch detected on GPIO 33"); break;
+    case 9  : Serial.println("Touch detected on GPIO 32"); break;
+    default : Serial.println("Wakeup not by touchpad"); break;
+  }
+}
+
+void callback(){
+  //placeholder callback function
+}
+
+#endif
 //   Diagnostic test for the displayed colour order
 //
 // Written by Bodmer 17/2/19 for the TFT_eSPI library:
@@ -1019,7 +1074,7 @@ TFT_eSPI tft = TFT_eSPI(); // Invoke custom library
 
 void setup(void)
 {
-  Serial.begin(9600);
+  Serial.begin(115200);
 
   tft.init();
 
@@ -1047,12 +1102,32 @@ void setup(void)
   tft.setTextColor(TFT_BLUE);
   tft.println(" Blue text");
 #endif
-  delay(5000);
+  //delay(5000);
+#ifdef DEEP_SLEEP_TOUCH_WAKEUP
+//Increment boot number and print it every reboot
+  ++bootCount;
+  Serial.println("Boot number: " + String(bootCount));
+
+  //Print the wakeup reason for ESP32 and touchpad too
+  print_wakeup_reason();
+  print_wakeup_touchpad();
+
+  //Setup interrupt on Touch Pad 0 (GPIO4)
+  touchAttachInterrupt(T0, callback, Threshold);
+
+  //Configure Touchpad as wakeup source
+  esp_sleep_enable_touchpad_wakeup();
+
+  //Go to sleep now
+  Serial.println("Going to sleep now");
+  //esp_deep_sleep_start();
+  Serial.println("This will never be printed");
+#endif
 }
 
 void loop()
 {
-#if 1
+#if 0
   tft.invertDisplay(false); // Where i is true or false
 
   tft.fillScreen(TFT_BLACK);
