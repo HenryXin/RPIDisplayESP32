@@ -201,6 +201,7 @@ unsigned int rainbow(byte value)
 #include <TFT_eSPI.h>
 #include <WiFi.h>
 #include <ArduinoJson.h>
+#include <HTTPClient.h>
 
 // This is the file name used to store the calibration data
 // You can change this to create new calibration files.
@@ -239,8 +240,10 @@ char server[] = "api.open-meteo.com";
 
 int count = 99;
 WiFiClient client;
+HTTPClient http;
 TFT_eSPI tft = TFT_eSPI();         // Invoke custom library
-DynamicJsonDocument jsonDoc(9216); // JSON formatted data
+DynamicJsonDocument jsonDoc(9182); // JSON formatted data
+//char jsonbuff[4096];
 
 unsigned int chkTime = 0;
 uint16_t x, y;
@@ -258,9 +261,11 @@ void setup()
 {
   Serial.begin(115200);
 
+  /*
   tft.init();
   tft.setRotation(0);
   touch_calibrate();
+  */
 
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED)
@@ -270,23 +275,26 @@ void setup()
   }
 
   Serial.println("Connected");
-
+  /*
   tft.fillScreen(TFT_BLACK);
 
   // tft.fillRect(DISP_X, DISP_Y, DISP_W, DISP_H, TFT_BLACK);
   tft.drawRect(0, 0, tft.width(), tft.height(), TFT_WHITE);
   tft.drawRect(1, 1, tft.width() - 1, tft.height() - 1, TFT_WHITE);
+  */
 }
 
 void loop(void)
 {
     checkTime();
+    /*
     if(tft.getTouch(&x, &y) > 0 && touchFlag == 0) // if screen pressed
     {
       touchFlag = 1;
       count = 99;
       screenFlag = 1 - screenFlag;
     }
+    */
 }
 
 void touch_calibrate()
@@ -378,28 +386,38 @@ void getWeather()
 String output;
 void connect() // function for Wi-Fi connection
 {
+#if 0
   client.connect(server, 80);                                                                        // connect to server on port 80
   client.println("GET /v1/forecast?latitude=40.39&longitude=-80.16&current_weather=true&hourly=temperature_2m HTTP/1.1"); // send HTTP request
   client.println("Host: api.open-meteo.com");
   client.println("User-Agent: ESP8266/0.1");
   client.println("Connection: close");
   client.println();
+  delay(300);
   client.find("\r\n\r\n");
-
+  delay(300);
   if (client.println() == 0)
   {
     Serial.println("HTTP request failed");
     return;
   }
-
+  delay(1000);
   char status[32] = {0};
   client.readBytesUntil('\r', status, sizeof(status));
   Serial.println(status);
-
   // essential instruction
   DeserializationError error = deserializeJson(jsonDoc, client);
   serializeJson(jsonDoc, output);
   Serial.println(output);
+#else
+  http.useHTTP10(true);
+  http.begin(client, "http://api.open-meteo.com/v1/forecast?latitude=52.52&longitude=13.41&current_weather=true&hourly=temperature_2m");
+  http.GET();
+
+  DeserializationError error = deserializeJson(jsonDoc, client);
+  serializeJson(jsonDoc, output);
+  Serial.println(output);
+#endif
 }
 
 void checkTime()
